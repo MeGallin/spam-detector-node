@@ -1,0 +1,24 @@
+# Node modules
+node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+
+# SQLite database
+*.db
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+
+# Optional: coverage and build outputs
+coverage/
+dist/
+build/
