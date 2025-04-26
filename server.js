@@ -27,7 +27,7 @@ app.get('/get-history/:sessionId', async (req, res) => {
   try {
     const { sessionId } = req.params;
     const state = await getState(sessionId);
-    res.json({ history: state?.history || [] });
+    res.json({ history: state?.messages || [] });
   } catch (error) {
     console.error('History retrieval error:', error);
     res.status(500).json({ error: 'Failed to retrieve history' });
@@ -39,7 +39,7 @@ app.post('/clear-history/:sessionId', async (req, res) => {
   try {
     const { sessionId } = req.params;
     await saveState(sessionId, {
-      history: [],
+      messages: [],
       timestamp: new Date().toISOString(),
     });
     res.json({ success: true });
@@ -49,10 +49,10 @@ app.post('/clear-history/:sessionId', async (req, res) => {
   }
 });
 
-// Check message endpoint
+// Check message endpoint with conversation awareness
 app.post('/check-message', async (req, res) => {
   try {
-    const { sessionId, message } = req.body;
+    const { sessionId, message, role = 'user' } = req.body;
 
     if (!sessionId || !message) {
       return res.status(400).json({ error: 'Missing sessionId or message' });
@@ -60,16 +60,30 @@ app.post('/check-message', async (req, res) => {
 
     // Get existing state
     const state = await getState(sessionId);
+    const messages = state?.messages || [];
 
-    // Detect spam
-    const result = await detectSpam(message);
+    // Create new message with timestamp
+    const timestamp = new Date().toISOString();
+    const newMessage = {
+      role,
+      content: message,
+      timestamp,
+    };
 
-    // Save state with new message and result
+    // Add new message to history
+    messages.push(newMessage);
+
+    // Detect spam using full conversation context
+    const result = await detectSpam(messages);
+
+    // Update the last message with the result
+    newMessage.result = result;
+
+    // Save updated state
     await saveState(sessionId, {
-      lastMessage: message,
-      lastResult: result,
-      timestamp: new Date().toISOString(),
-      history: [...(state?.history || []), { message, result }],
+      messages,
+      lastMessage: newMessage,
+      timestamp,
     });
 
     res.json({ result });
